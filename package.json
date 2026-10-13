@@ -1,0 +1,45 @@
+{
+  "name": "madomi-landing-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
+    "db:seed:mongo": "node src/seeds/run-mongo-seed.js",
+    "test:e2e:chat-cursor": "node scripts/e2e-chat-cursor.js",
+    "test:e2e:chat-productos": "node scripts/e2e-chat-productos.js",
+    "test:e2e:chat-fase4": "node scripts/e2e-chat-fase4.js",
+    "test:e2e:venta-5000": "node scripts/e2e-venta-5000.js",
+    "test:e2e:crm-admin": "node scripts/e2e-crm-admin.js",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.32",
+    "@prisma/client": "^6.1.0",
+    "@supabase/supabase-js": "^2.116.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.2",
+    "multer": "^2.3.0",
+    "openai": "^7.23.0",
+    "pdfkit": "^0.17.2",
+    "sharp": "^0.35.4",
+    "zod": "^4.6.2"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.1.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}

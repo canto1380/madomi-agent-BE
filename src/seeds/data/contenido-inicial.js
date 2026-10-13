@@ -1,0 +1,96 @@
+/** Sync con frontend/src/constants/constants.js → APP_CONSTANTS (textos de sección) */
+export const CONTENIDO_INICIAL = [
+  { clave: 'empresa.nombre', valor: 'Madomi Pastas', seccion: 'empresa', orden: 1 },
+  { clave: 'empresa.tagline', valor: 'Frescura y calidad desde 1993', seccion: 'empresa', orden: 2 },
+  {
+    clave: 'empresa.descripcion',
+    valor:
+      'Somos una empresa dedicada a la fabricación de pastas frescas desde 1993. Nacimos en San Miguel de Tucumán con la misión de acercar a tu mesa frescura y calidad.',
+    seccion: 'empresa',
+    orden: 3,
+  },
+  { clave: 'hero.titulo', valor: 'La pasta de todos los tucumanos', seccion: 'hero', orden: 1 },
+  {
+    clave: 'hero.subtitulo',
+    valor:
+      'Elaboramos pastas frescas con los mejores ingredientes, llevando tradición y sabor a tu mesa desde 1993.',
+    seccion: 'hero',
+    orden: 2,
+  },
+  { clave: 'hero.ctaProductos', valor: 'Ver productos', seccion: 'hero', orden: 3 },
+  { clave: 'hero.ctaContacto', valor: 'Contactanos', seccion: 'hero', orden: 4 },
+  { clave: 'historia.titulo', valor: 'Nuestra Historia', seccion: 'historia', orden: 1 },
+  {
+    clave: 'historia.subtitulo',
+    valor: 'Una tradición familiar de excelencia en pastas frescas.',
+    seccion: 'historia',
+    orden: 2,
+  },
+  {
+    clave: 'historia.parrafo.1',
+    valor:
+      'Somos la segunda generación de una familia dedicada a la elaboración de productos derivados de la harina. Amamos la buena cocina y es por eso que elaboramos nuestros productos con los mejores ingredientes.',
+    seccion: 'historia',
+    orden: 3,
+  },
+  {
+    clave: 'historia.parrafo.2',
+    valor:
+      'Desde nuestros inicios, hemos mantenido un compromiso inquebrantable con la calidad y la innovación. Cada producto refleja nuestra pasión por la buena mesa y el cuidado artesanal.',
+    seccion: 'historia',
+    orden: 4,
+  },
+  { clave: 'historia.stat.1.valor', valor: '30+', seccion: 'historia', orden: 5 },
+  { clave: 'historia.stat.1.etiqueta', valor: 'Años de experiencia', seccion: 'historia', orden: 6 },
+  { clave: 'historia.stat.2.valor', valor: '30+', seccion: 'historia', orden: 7 },
+  { clave: 'historia.stat.2.etiqueta', valor: 'Productos', seccion: 'historia', orden: 8 },
+  { clave: 'historia.stat.3.valor', valor: '15.000+', seccion: 'historia', orden: 9 },
+  { clave: 'historia.stat.3.etiqueta', valor: 'Familias confían en nosotros', seccion: 'historia', orden: 10 },
+  { clave: 'historia.stat.4.valor', valor: '30+', seccion: 'historia', orden: 11 },
+  { clave: 'historia.stat.4.etiqueta', valor: 'Clientes y Distribuidores', seccion: 'historia', orden: 12 },
+  { clave: 'productos.titulo', valor: 'Nuestros Productos', seccion: 'productos', orden: 1 },
+  {
+    clave: 'productos.subtitulo',
+    valor: 'Descubrí la variedad de pastas frescas que elaboramos cada día.',
+    seccion: 'productos',
+    orden: 2,
+  },
+  { clave: 'productos.vacio', valor: 'No hay productos disponibles en este momento.', seccion: 'productos', orden: 3 },
+  { clave: 'contacto.titulo', valor: 'Contáctanos', seccion: 'contacto', orden: 1 },
+  {
+    clave: 'contacto.subtitulo',
+    valor:
+      '¿Listo para disfrutar de la mejor pasta fresca? Escribinos y te llevamos frescura y calidad a tu mesa.',
+    seccion: 'contacto',
+    orden: 2,
+  },
+  { clave: 'nav.inicio', valor: 'Inicio', seccion: 'nav', orden: 1 },
+  { clave: 'nav.historia', valor: 'Historia', seccion: 'nav', orden: 2 },
+  { clave: 'nav.productos', valor: 'Productos', seccion: 'nav', orden: 3 },
+  { clave: 'nav.contacto', valor: 'Contacto', seccion: 'nav', orden: 4 },
+  { clave: 'loUltimo.titulo', valor: 'Lo último', seccion: 'loUltimo', orden: 1 },
+  {
+    clave: 'loUltimo.subtitulo',
+    valor: 'Nuestros lanzamientos más recientes, elaborados con la misma frescura de siempre.',
+    seccion: 'loUltimo',
+    orden: 2,
+  },
+  { clave: 'footer.seccionesTitulo', valor: 'Secciones', seccion: 'footer', orden: 1 },
+  { clave: 'footer.contactoTitulo', valor: 'Contacto', seccion: 'footer', orden: 2 },
+  { clave: 'footer.seguinosTitulo', valor: 'Seguinos', seccion: 'footer', orden: 3 },
+  { clave: 'footer.escribinosTitulo', valor: 'Escribinos', seccion: 'footer', orden: 4 },
+  {
+    clave: 'footer.ctaTexto',
+    valor: 'Consultá por productos, distribución o pedidos.',
+    seccion: 'footer',
+    orden: 5,
+  },
+  { clave: 'footer.whatsapp', valor: 'WhatsApp', seccion: 'footer', orden: 6 },
+  {
+    clave: 'footer.ubicacion',
+    valor: 'San Miguel de Tucumán, Tucumán · Argentina',
+    seccion: 'footer',
+    orden: 7,
+  },
+  { clave: 'footer.copyright', valor: 'Todos los derechos reservados.', seccion: 'footer', orden: 8 },
+];

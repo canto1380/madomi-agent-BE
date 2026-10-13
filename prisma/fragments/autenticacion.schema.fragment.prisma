@@ -1,0 +1,16 @@
+// Fragmento Prisma — Módulo Autenticación (sesión)
+// Mergear en backend/prisma/schema.prisma del proyecto destino.
+// Requiere modelos Usuarios y Roles del módulo usuarios.
+//
+// Agregar a model Usuarios:
+//   refreshTokens RefreshToken[]
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  usuarioId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  usuario Usuarios @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}

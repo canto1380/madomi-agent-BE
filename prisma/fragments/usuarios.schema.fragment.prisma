@@ -1,0 +1,49 @@
+// Fragmento Prisma — Módulo Usuarios (identidad)
+// Mergear en backend/prisma/schema.prisma del proyecto destino.
+// NO incluir RefreshToken (corresponde al módulo autenticacion).
+
+model Usuarios {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  claveEncriptada String
+  nombre          String
+  apellido        String
+  rolId           String
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rol Roles @relation(fields: [rolId], references: [id])
+}
+
+model Roles {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permisos RolPermiso[]
+  usuarios Usuarios[]
+}
+
+model Permisos {
+  id          String   @id @default(cuid())
+  codigo      String   @unique
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolPermiso[]
+}
+
+model RolPermiso {
+  id        String @id @default(cuid())
+  rolId     String
+  permisoId String
+
+  rol     Roles    @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso Permisos @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@unique([rolId, permisoId])
+}

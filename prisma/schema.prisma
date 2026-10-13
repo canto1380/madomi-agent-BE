@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Catálogo de productos de la landing (código interno como id).
+model Productos {
+  id          String   @id
+  nombre      String
+  categoria   String
+  descripcion String?
+  imagenUrl   String?
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+
+  /// Comercial — no expuesto en GET /api/productos (asistente y admin).
+  precioMinorista  Decimal?  @db.Decimal(12, 2)
+  precioMayorista  Decimal?  @db.Decimal(12, 2)
+  /// Cantidad mínima (en `unidadStock`) para aplicar precio mayorista. Null = solo si el cliente se declara mayorista.
+  cantidadMinimaMayorista Int?
+  stockUnidades    Int       @default(0)
+  /// Reservado por pedidos confirmados aún no entregados (no se descuenta de stockUnidades hasta entrega).
+  stockComprometidoUnidades Int @default(0)
+  unidadStock      String    @default("un")
+  ofertaPorcentaje Int?
+  ofertaDesde      DateTime?
+  ofertaHasta      DateTime?
+  activoComercial  Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  destacados ProductosDestacados[]
+
+  @@index([activo])
+  @@index([categoria])
+  @@index([activoComercial])
+}
+
+/// Categorías de producto para orden y agrupación en landing/admin.
+model Categorias {
+  id        String   @id @default(cuid())
+  nombre    String
+  slug      String   @unique
+  orden     Int      @default(0)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([activo])
+  @@index([orden])
+}
+
+/// Textos editables del sitio (clave/valor por sección).
+model ContenidoTextos {
+  id        String   @id @default(cuid())
+  clave     String   @unique
+  valor     String
+  seccion   String
+  tipo      String   @default("texto")
+  activo    Boolean  @default(true)
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([seccion])
+  @@index([activo])
+}
+
+/// Identidad visual: colores y logos (singleton id = default).
+model ConfiguracionBranding {
+  id                  String   @id @default("default")
+  colorPrimario       String
+  colorPrimarioOscuro String
+  colorSecundario     String
+  colorAcento         String
+  colorFondo          String
+  colorFondoOscuro    String
+  colorTexto          String
+  colorTextoClaro     String
+  colorError          String
+  colorExito          String
+  logoUrl             String
+  logoAlt             String
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+/// Datos de contacto informativos (singleton id = default).
+model ConfiguracionContacto {
+  id           String   @id @default("default")
+  telefono     String
+  telefonoLink String
+  email        String
+  whatsapp     String
+  direccion    String
+  horario      String
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Productos destacados por sección (ej. lo_ultimo).
+model ProductosDestacados {
+  id         String   @id @default(cuid())
+  productoId String
+  seccion    String   @default("lo_ultimo")
+  orden      Int      @default(0)
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  producto Productos @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, seccion])
+  @@index([seccion, activo])
+}
+
+/// Metadata de assets estáticos (URLs en frontend/public).
+model MediaAssets {
+  id        String   @id @default(cuid())
+  clave     String   @unique
+  tipo      String
+  url       String
+  alt       String?
+  orden     Int      @default(0)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([activo])
+  @@index([tipo])
+}
+
+/// Enlaces a redes sociales.
+model RedesSociales {
+  id         String   @id @default(cuid())
+  plataforma String
+  url        String
+  activo     Boolean  @default(true)
+  orden      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([activo])
+  @@index([orden])
+}
+
+model Usuarios {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  claveEncriptada String
+  nombre          String
+  apellido        String
+  rolId           String
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rol           Roles          @relation(fields: [rolId], references: [id])
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  usuarioId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  usuario Usuarios @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Roles {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permisos RolPermiso[]
+  usuarios Usuarios[]
+}
+
+model Permisos {
+  id          String   @id @default(cuid())
+  codigo      String   @unique
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolPermiso[]
+}
+
+model RolPermiso {
+  id        String @id @default(cuid())
+  rolId     String
+  permisoId String
+
+  rol     Roles    @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso Permisos @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@unique([rolId, permisoId])
+}
