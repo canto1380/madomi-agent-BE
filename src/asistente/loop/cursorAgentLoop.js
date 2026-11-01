@@ -1,26 +1,4 @@
-import { ejecutarOrchestradorAsistente } from './orchestradorLoop.js';
-
 /**
- * Runtime "cursor" = mismo orquestador (tools + estado) con redacción vía
- * `ASISTENTE_REDACT=cursor|auto` o legacy `CURSOR_SDK_REDACT=true`.
- *
- * No duplica Agent.prompt: la redacción vive en `redactarAsistenteConLlm.js`.
+ * @deprecated Usar `ASISTENTE_RUNTIME=agente-clientes-ia` (llmLoop enruta cursor → agenteClientesIa).
  */
-export async function ejecutarCursorAgentAsistente(params) {
-  const {
-    respuesta,
-    toolCallsCount,
-    presupuestoId,
-    pedidoId,
-    contextoChat,
-  } = await ejecutarOrchestradorAsistente(params);
-
-  return {
-    respuesta,
-    toolCallsCount,
-    presupuestoId: presupuestoId ?? null,
-    pedidoId: pedidoId ?? null,
-    cursorAgentId: params.ctx?.cursorAgentId ?? null,
-    contextoChat,
-  };
-}
+export { ejecutarAgenteClientesIa as ejecutarCursorAgentAsistente } from '../agentes/agenteClientesIa/run.js';

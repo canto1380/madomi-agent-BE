@@ -1,3 +1,8 @@
+/**
+ * @legacy Congelado (fase 2). Solo `ASISTENTE_RUNTIME=orchestrador`.
+ * Reglas nuevas → docs/comercial/prompt-agente-clientes-ia-runtime.md
+ * Ver backend/src/asistente/legacy/ORQUESTADOR.md
+ */
 import { extraerDatosContacto, mensajePareceDatosContacto } from '../intent/extraerDatosContacto.js';
 import {
   extraerLineasPedidoPorNombre,

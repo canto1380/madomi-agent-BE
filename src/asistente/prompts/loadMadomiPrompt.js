@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { env } from '../../config/env.js';
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const defaultPromptPath = path.join(backendRoot, '../docs/comercial/prompt-asistente-madomi.md');
+const defaultPromptPath = path.join(backendRoot, 'docs/comercial/prompt-asistente-madomi.md');
 
 let cachedPromptRaw = null;
 let cachedPromptPath = null;
@@ -69,7 +69,7 @@ export function buildSystemPromptConFallback({ empresa, bot }) {
 
 /**
  * Prompt corto para redacción en chat (no enviar 20k+ tokens a Cursor/OpenAI por mensaje).
- * Las reglas completas siguen en docs/comercial/prompt-asistente-madomi.md (runtime openai).
+ * Las reglas completas siguen en backend/docs/comercial/prompt-asistente-madomi.md (runtime openai).
  */
 export function loadMadomiPromptRedaccion({ empresa, bot }) {
   const nombre = empresa?.nombre ?? 'Madomi Pastas';

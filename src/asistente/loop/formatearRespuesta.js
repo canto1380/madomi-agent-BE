@@ -124,7 +124,7 @@ export function formatearRespuestaOrchestrador({
     );
   } else if (pidePdfPresupuesto && pdfPresupuesto?.result?.error === 'STORAGE_NOT_CONFIGURED') {
     lineas.push(
-      'No pude subir el PDF porque falta configurar Supabase en el servidor. El presupuesto sigue en borrador.',
+      'No pude subir el PDF porque el almacenamiento de archivos no está disponible en el servidor. El presupuesto sigue en borrador.',
     );
   } else if (pidePdfPresupuesto && pdfPresupuesto?.result?.error === 'PRESUPUESTO_NO_ENCONTRADO') {
     lineas.push('Primero armá un presupuesto (producto + cantidad) y después pedime el PDF.');

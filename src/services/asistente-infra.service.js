@@ -10,6 +10,9 @@ import {
   actualizarAsistenteBotRepositorio,
   obtenerAsistenteBotPorEmpresaRepositorio,
 } from '../mongo/repositories/asistenteBots.repository.js';
+import { resumenAgenteRunsRepositorio } from '../mongo/repositories/agenteRuns.repository.js';
+import { isStorageConfigured } from './storage.service.js';
+import { obtenerEstadoChatPublicoServicio } from './chat-public.service.js';
 
 function asegurarMongoActivo() {
   if (!isMongoHabilitado()) {
@@ -100,6 +103,48 @@ export async function actualizarAsistenteBotAdminServicio(rawBody) {
     activo: bot.activo,
     toolsHabilitadas: bot.toolsHabilitadas,
     systemPromptVersion: bot.systemPromptVersion,
+  };
+}
+
+export async function obtenerSaludRuntimeAsistenteAdminServicio({ horasMetricas = 24 } = {}) {
+  asegurarMongoActivo();
+  const empresa = await obtenerEmpresaOperativa();
+  const bot = await obtenerAsistenteBotPorEmpresaRepositorio(empresa._id);
+  const widget = await obtenerEstadoChatPublicoServicio();
+  const metricas = await resumenAgenteRunsRepositorio({ horas: horasMetricas });
+
+  return {
+    entorno: env.NODE_ENV,
+    featureAsistente: env.FEATURE_ASISTENTE,
+    runtime: env.ASISTENTE_RUNTIME,
+    llmProveedor: env.ASISTENTE_LLM_PROVEEDOR,
+    cursorCloud: env.CURSOR_AGENT_TARGET === 'cloud' && Boolean(env.CURSOR_API_KEY),
+    openaiConfigurado: Boolean(env.OPENAI_API_KEY),
+    pdfStorage: isStorageConfigured(),
+    chatTurnTimeoutMs: env.CHAT_TURN_TIMEOUT_MS,
+    rateLimit: {
+      ventanaMs: env.CHAT_RATE_LIMIT_WINDOW_MS,
+      max: env.CHAT_RATE_LIMIT_MAX,
+    },
+    empresaSlug: empresa.slug,
+    bot: bot
+      ? {
+          nombre: bot.nombre,
+          activo: bot.activo,
+          modeloSeed: bot.modelo,
+          systemPromptVersion: bot.systemPromptVersion,
+          toolsHabilitadasCount: bot.toolsHabilitadas?.length ?? 0,
+        }
+      : null,
+    widgetPublico: {
+      disponible: widget.disponible,
+      codigo: widget.codigo,
+    },
+    metricasAgenteRuns: metricas,
+    checklist: {
+      listoParaWidget: widget.disponible && Boolean(bot?.activo),
+      accionesSiNoDisponible: widget.codigo ?? null,
+    },
   };
 }
 

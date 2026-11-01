@@ -8,7 +8,7 @@ import {
   bajaLogicaProductoRepositorio,
 } from '../repositories/productos.repository.js';
 import { sincronizarDestacadosProducto } from './destacados.service.js';
-import { deleteStorageFile, extractStoragePath, isSupabaseConfigured } from './storage.service.js';
+import { deleteStorageFile, extractStoragePath } from './storage.service.js';
 import { extraerFlagsDestacados } from '../utils/productoDestacados.js';
 
 const CAMPOS_ORDEN_ADMIN = [
@@ -176,7 +176,6 @@ export async function actualizarProductoServicio(id, data) {
   if (
     payload.imagenUrl &&
     payload.imagenUrl !== existente.imagenUrl &&
-    isSupabaseConfigured() &&
     extractStoragePath(existente.imagenUrl)
   ) {
     try {

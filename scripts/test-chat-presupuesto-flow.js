@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({ path: path.join(backendRoot, '.env') });
+process.env.ASISTENTE_RUNTIME = process.env.ASISTENTE_RUNTIME || 'agente-clientes-ia';
+process.env.ASISTENTE_LLM_PROVEEDOR = process.env.ASISTENTE_LLM_PROVEEDOR || 'auto';
 process.env.ASISTENTE_REDACT = 'none';
 
 const { initializeDatabase } = await import('../src/startup/database.js');

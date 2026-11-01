@@ -1,55 +1,65 @@
-import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/AppError.js';
 import { resolveStorageFolder } from '../utils/storagePaths.js';
+import * as localDriver from './storage/local.driver.js';
+import * as supabaseDriver from './storage/supabase.driver.js';
 
 const IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const VIDEO_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 
-let supabaseClient = null;
-
-function getSupabase() {
-  if (!isSupabaseConfigured()) {
-    throw new AppError('Supabase no está configurado en el servidor', 503, 'STORAGE_NOT_CONFIGURED');
-  }
-
-  if (!supabaseClient) {
-    supabaseClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-  }
-
-  return supabaseClient;
+function driverActivo() {
+  return env.STORAGE_DRIVER === 'local' ? localDriver : supabaseDriver;
 }
 
 export function isSupabaseConfigured() {
-  return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_STORAGE_BUCKET);
+  return supabaseDriver.isConfigured();
 }
 
-function buildPublicUrl(path) {
-  return `${env.SUPABASE_URL}/storage/v1/object/public/${env.SUPABASE_STORAGE_BUCKET}/${path}`;
+export function isStorageConfigured() {
+  return driverActivo().isConfigured();
 }
 
 export function extractStoragePath(publicUrl) {
-  if (!publicUrl || !env.SUPABASE_URL || !env.SUPABASE_STORAGE_BUCKET) return null;
+  return localDriver.extractPath(publicUrl) || supabaseDriver.extractPath(publicUrl);
+}
 
-  const marker = `/storage/v1/object/public/${env.SUPABASE_STORAGE_BUCKET}/`;
-  const index = publicUrl.indexOf(marker);
-  if (index === -1) return null;
+export async function prepararStorage() {
+  if (env.STORAGE_DRIVER === 'local' && localDriver.isConfigured()) {
+    await localDriver.asegurarDirectorio();
+  }
+}
 
-  return decodeURIComponent(publicUrl.slice(index + marker.length));
+function assertStorageListo() {
+  if (isStorageConfigured()) return;
+
+  const mensaje =
+    env.STORAGE_DRIVER === 'local'
+      ? 'Falta STORAGE_PUBLIC_BASE_URL para publicar los archivos del servidor'
+      : 'Supabase no está configurado en el servidor';
+
+  throw new AppError(mensaje, 503, 'STORAGE_NOT_CONFIGURED');
 }
 
 export async function deleteStorageFile(publicUrl) {
-  const path = extractStoragePath(publicUrl);
-  if (!path) return;
-
-  const client = getSupabase();
-  const { error } = await client.storage.from(env.SUPABASE_STORAGE_BUCKET).remove([path]);
-
-  if (error) {
-    throw new AppError(error.message || 'No se pudo eliminar el archivo anterior', 500, 'STORAGE_DELETE_ERROR');
+  const localPath = localDriver.extractPath(publicUrl);
+  if (localPath) {
+    await localDriver.remove(localPath);
+    return;
   }
+
+  const remotePath = supabaseDriver.extractPath(publicUrl);
+  if (!remotePath || !supabaseDriver.isConfigured()) return;
+
+  await supabaseDriver.remove(remotePath);
+}
+
+async function guardarBuffer(storagePath, buffer, { contentType, upsert }) {
+  assertStorageListo();
+  const driver = driverActivo();
+  await driver.put(storagePath, buffer, { contentType, upsert });
+  return driver.publicUrl(storagePath);
 }
 
 export async function uploadMediaFile(file, { clave, carpeta, modulo, previousUrl } = {}) {
@@ -57,7 +67,8 @@ export async function uploadMediaFile(file, { clave, carpeta, modulo, previousUr
     throw new AppError('No se recibió ningún archivo', 400, 'VALIDATION_ERROR');
   }
 
-  const client = getSupabase();
+  assertStorageListo();
+
   const safeClave = String(clave || 'media')
     .trim()
     .replace(/[^a-zA-Z0-9-_]/g, '-')
@@ -81,16 +92,8 @@ export async function uploadMediaFile(file, { clave, carpeta, modulo, previousUr
   }
 
   const folder = resolveStorageFolder({ carpeta, clave: safeClave, modulo });
-  const path = `${folder}/${safeClave}/${randomUUID()}.${extension}`;
-
-  const { error } = await client.storage.from(env.SUPABASE_STORAGE_BUCKET).upload(path, buffer, {
-    contentType,
-    upsert: false,
-  });
-
-  if (error) {
-    throw new AppError(error.message || 'Error al subir archivo', 500, 'STORAGE_UPLOAD_ERROR');
-  }
+  const storagePath = `${folder}/${safeClave}/${randomUUID()}.${extension}`;
+  const url = await guardarBuffer(storagePath, buffer, { contentType, upsert: false });
 
   if (previousUrl) {
     try {
@@ -101,7 +104,7 @@ export async function uploadMediaFile(file, { clave, carpeta, modulo, previousUr
   }
 
   return {
-    url: buildPublicUrl(path),
+    url,
     tipo,
     carpeta: folder,
   };
@@ -113,17 +116,6 @@ export async function uploadBufferToStorage(buffer, { storagePath, contentType =
     throw new AppError('Buffer vacío', 400, 'VALIDATION_ERROR');
   }
 
-  const client = getSupabase();
   const path = storagePath.replace(/^\/+/, '');
-
-  const { error } = await client.storage.from(env.SUPABASE_STORAGE_BUCKET).upload(path, buffer, {
-    contentType,
-    upsert: true,
-  });
-
-  if (error) {
-    throw new AppError(error.message || 'Error al subir archivo', 500, 'STORAGE_UPLOAD_ERROR');
-  }
-
-  return buildPublicUrl(path);
+  return guardarBuffer(path, buffer, { contentType, upsert: true });
 }

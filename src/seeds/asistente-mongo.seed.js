@@ -15,7 +15,7 @@ import { env } from '../config/env.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const POLITICAS_MD = path.resolve(
   __dirname,
-  '../../../docs/comercial/politicas-entrega-ejemplo.md',
+  '../../docs/comercial/politicas-entrega-ejemplo.md',
 );
 
 const TOOLS_INICIALES = [

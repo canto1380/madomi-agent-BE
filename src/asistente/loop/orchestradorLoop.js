@@ -1,3 +1,7 @@
+/**
+ * @legacy Runtime orquestador (interpretarTurno + plantillas). Congelado — producción usa agente-clientes-ia.
+ * Ver backend/src/asistente/legacy/ORQUESTADOR.md
+ */
 import { ejecutarTool } from '../tools/index.js';
 import { crearAgenteRunRepositorio } from '../../mongo/repositories/agenteRuns.repository.js';
 import { consultarPrecioTool } from '../tools/consultarPrecio.js';

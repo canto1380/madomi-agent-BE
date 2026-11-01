@@ -24,6 +24,15 @@ export const buscarProductosTool = {
     properties: {
       search: { type: 'string', description: 'Texto a buscar en nombre, categoría o id' },
       categoria: { type: 'string', description: 'Filtrar por categoría exacta' },
+      listarCatalogo: {
+        type: 'boolean',
+        description: 'true = listado general del catálogo (sin search)',
+      },
+      novedades: {
+        type: 'boolean',
+        description: 'true = productos destacados sección novedades (lo_ultimo)',
+      },
+      limit: { type: 'number', description: 'Máximo resultados (default 20)' },
     },
   },
   async execute(rawArgs, ctx) {

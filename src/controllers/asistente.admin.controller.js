@@ -5,6 +5,7 @@ import {
   listarContextosAdminServicio,
   obtenerContextoVigenteAdminServicio,
   actualizarAsistenteBotAdminServicio,
+  obtenerSaludRuntimeAsistenteAdminServicio,
 } from '../services/asistente-infra.service.js';
 
 const responderError = (res, error) => {
@@ -40,6 +41,16 @@ export const actualizarAsistenteBotAdmin = asyncHandler(async (req, res) => {
   try {
     const data = await actualizarAsistenteBotAdminServicio(req.validatedData);
     res.status(200).json({ data, error: null, message: 'Bot actualizado' });
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+export const obtenerSaludRuntimeAsistenteAdmin = asyncHandler(async (req, res) => {
+  try {
+    const horas = Math.min(Number(req.query.horas) || 24, 168);
+    const data = await obtenerSaludRuntimeAsistenteAdminServicio({ horasMetricas: horas });
+    res.status(200).json({ data, error: null, message: 'OK' });
   } catch (error) {
     return responderError(res, error);
   }

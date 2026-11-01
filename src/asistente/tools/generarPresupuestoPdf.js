@@ -7,7 +7,8 @@ import {
 } from '../../mongo/repositories/presupuestos.repository.js';
 import { buscarClientePorIdRepositorio } from '../../mongo/repositories/clientes.repository.js';
 import { actualizarLeadRepositorio } from '../../mongo/repositories/leads.repository.js';
-import { isSupabaseConfigured, uploadBufferToStorage } from '../../services/storage.service.js';
+import { env } from '../../config/env.js';
+import { isStorageConfigured, uploadBufferToStorage } from '../../services/storage.service.js';
 import { renderPresupuestoPdfBuffer } from '../presupuesto/renderPresupuestoPdf.js';
 import { obtenerContextoPdfPresupuesto } from '../presupuesto/obtenerContextoPdf.js';
 
@@ -56,11 +57,14 @@ export const generarPresupuestoPdfTool = {
       };
     }
 
-    if (!isSupabaseConfigured()) {
+    if (!isStorageConfigured()) {
       return {
         ok: false,
         error: 'STORAGE_NOT_CONFIGURED',
-        mensaje: 'Configurá SUPABASE_URL y claves para generar PDF.',
+        mensaje:
+          env.STORAGE_DRIVER === 'local'
+            ? 'Configurá STORAGE_PUBLIC_BASE_URL para guardar archivos en el servidor.'
+            : 'Configurá SUPABASE_URL y claves para generar PDF.',
       };
     }
 

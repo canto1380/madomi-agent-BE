@@ -9,7 +9,7 @@ import {
   actualizarMediaRepositorio,
   bajaLogicaMediaRepositorio,
 } from '../repositories/media.repository.js';
-import { deleteStorageFile, extractStoragePath, isSupabaseConfigured } from './storage.service.js';
+import { deleteStorageFile, extractStoragePath } from './storage.service.js';
 
 const CAMPOS_ORDEN = ['clave', 'tipo', 'url', 'orden', 'activo', 'createdAt', 'updatedAt'];
 
@@ -93,7 +93,6 @@ export async function actualizarMediaServicio(id, data) {
   if (
     data.url &&
     data.url !== existente.url &&
-    isSupabaseConfigured() &&
     extractStoragePath(existente.url)
   ) {
     try {

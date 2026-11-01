@@ -15,7 +15,7 @@ function mapearHistorialParaLlm(mensajes, maxTurnos = env.CHAT_HISTORIAL_MAX_MEN
   }));
 }
 
-/** Runtime opcional OpenAI — no es el default del proyecto Madomi. */
+/** @deprecated Usar `ejecutarAgenteClientesIa` (llmLoop enruta openai → agenteClientesIa). */
 export async function ejecutarOpenAiAsistente({
   empresa,
   bot,

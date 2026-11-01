@@ -15,6 +15,10 @@
     "test:e2e:chat-fase4": "node scripts/e2e-chat-fase4.js",
     "test:e2e:venta-5000": "node scripts/e2e-venta-5000.js",
     "test:e2e:crm-admin": "node scripts/e2e-crm-admin.js",
+    "test:eval:chat": "node scripts/eval-chat/run-eval-chat.js",
+    "test:eval:chat:smoke": "node scripts/eval-chat/run-eval-chat.js --tag smoke",
+    "test:eval:chat:presupuesto": "node scripts/eval-chat/run-eval-chat.js --tag presupuesto",
+    "check:prod:asistente": "node scripts/check-prod-asistente.js",
     "db:studio": "prisma studio"
   },
   "dependencies": {

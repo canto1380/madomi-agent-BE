@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "descripcion": "Escenarios de evaluación agente-clientes-ia vía enviarMensajeChatServicio (misma ruta que el widget).",
+  "escenarios": [
+    {
+      "id": "saludo-puro",
+      "tags": ["smoke"],
+      "descripcion": "Saludo sin LLM lento (fast path)",
+      "turnos": ["hola"],
+      "expect": {
+        "respuestaContiene": ["hola", "ayud"],
+        "respuestaNoContiene": ["error", "503"],
+        "presupuestoId": "absent",
+        "maxLatenciaMs": 25000
+      }
+    },
+    {
+      "id": "saludo-cordial",
+      "tags": ["smoke", "llm"],
+      "descripcion": "Saludo con small talk — usa Cursor",
+      "turnos": ["buenas, qué tal?"],
+      "expect": {
+        "respuestaContieneAny": ["hola", "buenas", "ayud", "madomi"],
+        "presupuestoId": "absent",
+        "maxLatenciaMs": 120000
+      }
+    },
+    {
+      "id": "novedades",
+      "tags": ["llm", "catalogo"],
+      "descripcion": "Sección novedades + mención de productos",
+      "turnos": ["productos nuevos"],
+      "expect": {
+        "respuestaContieneAny": ["bondiola", "novedad", "producto", "humita", "guiso"],
+        "presupuestoId": "absent",
+        "maxLatenciaMs": 120000
+      }
+    },
+    {
+      "id": "precio-bondiola",
+      "tags": ["llm", "precio"],
+      "descripcion": "Consulta de precio minorista",
+      "turnos": ["cuánto sale la bondiola desmechada?"],
+      "expect": {
+        "respuestaContieneAny": ["bondiola", "ars", "$", "precio", "1."],
+        "presupuestoId": "absent",
+        "maxLatenciaMs": 120000
+      }
+    },
+    {
+      "id": "presupuesto-pide-localidad",
+      "tags": ["llm", "presupuesto"],
+      "descripcion": "Tras cantidades debe pedir localidad (sin PDF aún)",
+      "turnos": ["10 unidades de bondiola"],
+      "expect": {
+        "respuestaContieneAny": ["localidad", "barrio", "envío", "envio", "zon"],
+        "respuestaNoContiene": [".pdf", "supabase.co"],
+        "presupuestoId": "absent",
+        "maxLatenciaMs": 120000
+      }
+    },
+    {
+      "id": "presupuesto-flujo-completo",
+      "tags": ["llm", "presupuesto", "slow"],
+      "descripcion": "Cantidades → contacto → localidad → PDF/presupuesto (assert por turno)",
+      "turnos": [
+        "10 unidades de bondiola y 15 de guiso de lenteja",
+        "Alejandro penalba 3815479768",
+        "Soy de San Miguel de Tucuman"
+      ],
+      "expectPorTurno": [
+        {
+          "presupuestoId": "absent",
+          "respuestaContieneAny": ["localidad", "barrio", "envío", "envio", "bondiola", "anot", "cantidad"],
+          "respuestaNoContiene": [".pdf", "supabase.co/storage"],
+          "maxLatenciaMs": 120000
+        },
+        {
+          "presupuestoId": "absent",
+          "respuestaContieneAny": [
+            "localidad",
+            "barrio",
+            "envío",
+            "envio",
+            "tel",
+            "gracias",
+            "anot",
+            "alejandro"
+          ],
+          "respuestaNoContiene": [".pdf", "supabase.co/storage"],
+          "maxLatenciaMs": 120000
+        },
+        {
+          "presupuestoId": "present",
+          "respuestaContieneAny": ["presupuesto", "http"],
+          "respuestaRegex": "(https?://|\\.pdf|ARS|\\$)",
+          "respuestaNoContiene": ["decime productos y cantidades otra vez", "no tengo productos"],
+          "maxLatenciaMs": 180000
+        }
+      ]
+    }
+  ]
+}

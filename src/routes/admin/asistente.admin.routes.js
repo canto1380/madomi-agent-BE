@@ -5,6 +5,7 @@ import {
   listarContextosAsistenteAdmin,
   obtenerContextoVigenteAsistenteAdmin,
   actualizarAsistenteBotAdmin,
+  obtenerSaludRuntimeAsistenteAdmin,
 } from '../../controllers/asistente.admin.controller.js';
 import { requirePermiso } from '../../middlewares/requirePermiso.js';
 import { PERMISOS_COMERCIAL } from '../../constants/permisos.js';
@@ -15,6 +16,7 @@ const leerComercial = requirePermiso(PERMISOS_COMERCIAL.LEER);
 const escribirComercial = requirePermiso(PERMISOS_COMERCIAL.ESCRIBIR);
 
 router.get('/empresa', leerComercial, obtenerEmpresaAsistenteAdmin);
+router.get('/runtime/salud', leerComercial, obtenerSaludRuntimeAsistenteAdmin);
 router.patch(
   '/bot',
   escribirComercial,

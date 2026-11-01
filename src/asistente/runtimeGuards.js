@@ -5,15 +5,25 @@ import { buscarEmpresaPorSlugRepositorio } from '../mongo/repositories/empresas.
 import { obtenerAsistenteBotPorEmpresaRepositorio } from '../mongo/repositories/asistenteBots.repository.js';
 
 function validarCredencialesRuntime() {
-  if (env.ASISTENTE_RUNTIME === 'openai' && !env.OPENAI_API_KEY) {
-    throw new AppError('Asistente no disponible', 503, 'ASISTENTE_NO_DISPONIBLE');
+  const runtimesAgente = new Set(['agente-clientes-ia', 'agente-clientes', 'openai', 'cursor']);
+  if (runtimesAgente.has(env.ASISTENTE_RUNTIME)) {
+    const prov = env.ASISTENTE_LLM_PROVEEDOR;
+    if (prov === 'openai' && !env.OPENAI_API_KEY) {
+      throw new AppError('Asistente no disponible', 503, 'ASISTENTE_NO_DISPONIBLE');
+    }
+    if (prov === 'cursor' && !env.CURSOR_API_KEY) {
+      throw new AppError('Asistente no disponible', 503, 'ASISTENTE_NO_DISPONIBLE');
+    }
+    if (prov === 'auto' && !env.CURSOR_API_KEY && !env.OPENAI_API_KEY) {
+      throw new AppError('Asistente no disponible', 503, 'ASISTENTE_NO_DISPONIBLE');
+    }
+    return;
   }
-  if (
-    env.ASISTENTE_RUNTIME === 'cursor' &&
-    env.CURSOR_SDK_REDACT &&
-    !env.CURSOR_API_KEY
-  ) {
-    throw new AppError('Asistente no disponible', 503, 'ASISTENTE_NO_DISPONIBLE');
+  if (env.ASISTENTE_RUNTIME === 'orchestrador' && env.ASISTENTE_REDACT !== 'none') {
+    const usaCursor = env.ASISTENTE_REDACT === 'cursor' || env.ASISTENTE_REDACT === 'auto';
+    if (usaCursor && env.CURSOR_AGENT_TARGET === 'cloud' && !env.CURSOR_API_KEY) {
+      throw new AppError('Asistente no disponible', 503, 'ASISTENTE_NO_DISPONIBLE');
+    }
   }
 }
 

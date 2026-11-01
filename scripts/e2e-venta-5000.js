@@ -23,7 +23,7 @@ const { obtenerProductoComercialPorIdRepositorio } = await import(
 const { calcularStockDisponible } = await import('../src/asistente/stock/stockComercial.js');
 const { actualizarLeadTool } = await import('../src/asistente/tools/actualizarLead.js');
 const { buscarEmpresaPorSlugRepositorio } = await import('../src/mongo/repositories/empresas.repository.js');
-const { isSupabaseConfigured } = await import('../src/services/storage.service.js');
+const { isStorageConfigured } = await import('../src/services/storage.service.js');
 
 const PRODUCTO_ID = '5000';
 const CANTIDAD = 2;
@@ -88,11 +88,11 @@ async function main() {
     mensaje: 'Generá el PDF del presupuesto',
     metadata: { canal: 'e2e' },
   });
-  if (isSupabaseConfigured()) {
+  if (isStorageConfigured()) {
     assert(/Link:|http/i.test(t2.respuesta), 'Debe incluir link PDF');
-    console.log('   PDF OK (Supabase configurado)');
+    console.log('   PDF OK (storage configurado)');
   } else {
-    console.log('   ⚠ Supabase no configurado — PDF omitido');
+    console.log('   ⚠ Storage no configurado — PDF omitido');
   }
 
   console.log('\n4) Confirmar compra (cerrarVenta)');

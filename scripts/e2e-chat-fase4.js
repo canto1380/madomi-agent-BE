@@ -19,7 +19,7 @@ const { initializeDatabase } = await import('../src/startup/database.js');
 const { prisma } = await import('../src/providers/prisma.js');
 const { enviarMensajeChatServicio } = await import('../src/services/chat.service.js');
 const { env } = await import('../src/config/env.js');
-const { isSupabaseConfigured } = await import('../src/services/storage.service.js');
+const { isStorageConfigured } = await import('../src/services/storage.service.js');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -56,11 +56,11 @@ async function main() {
     mensaje: 'Generá el PDF del presupuesto',
     metadata: { canal: 'e2e' },
   });
-  if (isSupabaseConfigured()) {
+  if (isStorageConfigured()) {
     assert(/Link:|pdf|http/i.test(t2.respuesta), 'Respuesta debe incluir link PDF');
     assert(t2.estadoLead === 'presupuesto_enviado', `estadoLead ${t2.estadoLead}`);
   } else {
-    console.log('(Supabase no configurado — se omite assert PDF)');
+    console.log('(Storage no configurado — se omite assert PDF)');
   }
 
   console.log('\n✅ E2E fase 4 (presupuesto + PDF condicional) completado.');

@@ -2,6 +2,14 @@ import { AppError } from '../errors/AppError.js';
 import { env } from '../config/env.js';
 
 export const errorMiddleware = (err, req, res, _next) => {
+  if (res.headersSent) {
+    console.error('[API] error tras iniciar respuesta (p. ej. SSE):', err);
+    if (!res.writableEnded) {
+      res.end();
+    }
+    return undefined;
+  }
+
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       data: null,

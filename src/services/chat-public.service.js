@@ -4,6 +4,17 @@ import { buscarEmpresaPorSlugRepositorio } from '../mongo/repositories/empresas.
 import { obtenerAsistenteBotPorEmpresaRepositorio } from '../mongo/repositories/asistenteBots.repository.js';
 
 function runtimeConfigurado() {
+  const runtimesAgente = new Set(['agente-clientes-ia', 'agente-clientes', 'openai', 'cursor']);
+  if (runtimesAgente.has(env.ASISTENTE_RUNTIME)) {
+    const prov = env.ASISTENTE_LLM_PROVEEDOR;
+    if (prov === 'openai') {
+      return Boolean(env.OPENAI_API_KEY);
+    }
+    if (prov === 'cursor') {
+      return Boolean(env.CURSOR_API_KEY);
+    }
+    return Boolean(env.CURSOR_API_KEY || env.OPENAI_API_KEY);
+  }
   if (env.ASISTENTE_RUNTIME === 'openai' && !env.OPENAI_API_KEY) {
     return false;
   }

@@ -1,3 +1,4 @@
+/** @legacy Copy por intención — solo orquestador. Producción: respuesta del LLM + kernel. */
 import { INTENCION } from './interpretarTurno.js';
 import { formatearRespuestaEnvio } from './formatearPoliticasEnvio.js';
 
