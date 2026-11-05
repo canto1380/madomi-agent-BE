@@ -10,6 +10,8 @@ import {
   crearDestacadoRepositorio,
   actualizarDestacadoRepositorio,
   bajaLogicaDestacadoRepositorio,
+  obtenerMaxOrdenDestacadoRepositorio,
+  reordenarDestacadosRepositorio,
 } from '../repositories/destacados.repository.js';
 
 const CAMPOS_ORDEN = ['productoId', 'seccion', 'orden', 'activo', 'createdAt', 'updatedAt'];
@@ -116,18 +118,37 @@ export async function actualizarDestacadoServicio(id, data) {
   return mapearDestacadoAdmin(destacado);
 }
 
+export async function reordenarDestacadosServicio({ seccion, ids }) {
+  const filas = await listarDestacadosActivosRepositorio(seccion);
+  const vigentes = new Set(filas.map((fila) => fila.id));
+
+  if (ids.length !== filas.length || ids.some((id) => !vigentes.has(id)) || new Set(ids).size !== ids.length) {
+    throw new AppError('La lista no coincide con los productos de la franja', 400, 'VALIDATION_ERROR');
+  }
+
+  await reordenarDestacadosRepositorio(ids);
+  const actualizados = await listarDestacadosActivosRepositorio(seccion);
+  return actualizados.map(mapearDestacadoAdmin);
+}
+
 export async function eliminarDestacadoServicio(id) {
   await asegurarDestacadoExiste(id);
   const destacado = await bajaLogicaDestacadoRepositorio(id);
   return mapearDestacadoAdmin(destacado);
 }
 
+async function ordenAlFinal(seccion) {
+  const maximo = await obtenerMaxOrdenDestacadoRepositorio(seccion);
+  return maximo + 1;
+}
+
 async function activarDestacadoProducto(productoId, seccion) {
   const existente = await buscarDestacadoPorProductoSeccionRepositorio(productoId, seccion);
+  const orden = await ordenAlFinal(seccion);
 
   if (existente) {
     if (!existente.activo) {
-      await actualizarDestacadoRepositorio(existente.id, { activo: true });
+      await actualizarDestacadoRepositorio(existente.id, { activo: true, orden });
     }
     return;
   }
@@ -135,7 +156,7 @@ async function activarDestacadoProducto(productoId, seccion) {
   await crearDestacadoRepositorio({
     productoId,
     seccion,
-    orden: 0,
+    orden,
     activo: true,
   });
 }

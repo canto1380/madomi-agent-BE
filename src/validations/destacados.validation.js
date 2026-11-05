@@ -14,6 +14,11 @@ export const actualizarDestacadoSchema = z.object({
   activo: z.boolean().optional(),
 });
 
+export const reordenarDestacadosSchema = z.object({
+  seccion: z.literal('lo_ultimo'),
+  ids: z.array(z.string().min(1)).min(1, 'Indicá el orden de los productos'),
+});
+
 export const idParamSchema = z.object({
   id: z.string().min(1, 'ID inválido'),
 });

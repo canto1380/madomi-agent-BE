@@ -20,10 +20,11 @@ export const consultarStockTool = {
     const args = argsSchema.parse(rawArgs);
     const producto = await obtenerProductoComercialPorIdRepositorio(args.productoId);
     if (!producto) {
-      return { encontrado: false };
+      return { status: 'producto_no_encontrado', encontrado: false, productoId: args.productoId };
     }
     const stockDisponible = calcularStockDisponible(producto);
     return {
+      status: stockDisponible > 0 ? 'stock_disponible' : 'sin_stock',
       encontrado: true,
       productoId: producto.id,
       nombre: producto.nombre,

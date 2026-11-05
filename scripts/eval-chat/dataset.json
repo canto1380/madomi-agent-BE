@@ -1,68 +1,84 @@
 {
-  "version": 1,
-  "descripcion": "Escenarios de evaluación agente-clientes-ia vía enviarMensajeChatServicio (misma ruta que el widget).",
+  "version": 2,
+  "descripcion": "Eval agente-clientes-ia: mensajes realistas; aserciones genéricas (sin atar a SKUs concretos).",
   "escenarios": [
     {
       "id": "saludo-puro",
-      "tags": ["smoke"],
-      "descripcion": "Saludo sin LLM lento (fast path)",
+      "tags": ["smoke", "llm"],
+      "descripcion": "Saludo — Opción A (LLM, sin tools obligatorias)",
       "turnos": ["hola"],
       "expect": {
-        "respuestaContiene": ["hola", "ayud"],
-        "respuestaNoContiene": ["error", "503"],
+        "respuestaContieneAny": ["hola", "ayud", "madomi", "qué", "como"],
+        "maxToolCalls": 0,
+        "noFallbackError": true,
+        "noPlantillaSinCoincidencias": true,
         "presupuestoId": "absent",
-        "maxLatenciaMs": 25000
+        "minRespuestaLength": 12,
+        "maxLatenciaMs": 120000
       }
     },
     {
       "id": "saludo-cordial",
       "tags": ["smoke", "llm"],
-      "descripcion": "Saludo con small talk — usa Cursor",
+      "descripcion": "Small talk inicial",
       "turnos": ["buenas, qué tal?"],
       "expect": {
-        "respuestaContieneAny": ["hola", "buenas", "ayud", "madomi"],
+        "respuestaContieneAny": ["hola", "buenas", "ayud", "madomi", "qué", "tal"],
+        "noFallbackError": true,
         "presupuestoId": "absent",
+        "minRespuestaLength": 12,
         "maxLatenciaMs": 120000
       }
     },
     {
       "id": "novedades",
       "tags": ["llm", "catalogo"],
-      "descripcion": "Sección novedades + mención de productos",
+      "descripcion": "Novedades — debe usar catálogo, no nombres fijos",
       "turnos": ["productos nuevos"],
       "expect": {
-        "respuestaContieneAny": ["bondiola", "novedad", "producto", "humita", "guiso"],
+        "respuestaCatalogoONovedades": true,
+        "minToolCalls": 1,
+        "noFallbackError": true,
+        "noPlantillaSinCoincidencias": true,
         "presupuestoId": "absent",
+        "minRespuestaLength": 40,
         "maxLatenciaMs": 120000
       }
     },
     {
       "id": "precio-bondiola",
       "tags": ["llm", "precio"],
-      "descripcion": "Consulta de precio minorista",
+      "descripcion": "Precio con producto nombrado en el mensaje (assert genérico de monto)",
       "turnos": ["cuánto sale la bondiola desmechada?"],
       "expect": {
-        "respuestaContieneAny": ["bondiola", "ars", "$", "precio", "1."],
+        "montoArsEnRespuesta": true,
+        "minToolCalls": 1,
+        "noFallbackError": true,
+        "noPlantillaSinCoincidencias": true,
         "presupuestoId": "absent",
+        "minRespuestaLength": 25,
         "maxLatenciaMs": 120000
       }
     },
     {
       "id": "presupuesto-pide-localidad",
       "tags": ["llm", "presupuesto"],
-      "descripcion": "Tras cantidades debe pedir localidad (sin PDF aún)",
+      "descripcion": "Cantidades → debe orientar a localidad/envío antes del PDF",
       "turnos": ["10 unidades de bondiola"],
       "expect": {
-        "respuestaContieneAny": ["localidad", "barrio", "envío", "envio", "zon"],
+        "pideLocalidadOEnvio": true,
+        "respuestaContieneAny": ["cantidad", "unidad", "unidades", "anot", "producto", "presup"],
         "respuestaNoContiene": [".pdf", "supabase.co"],
+        "noFallbackError": true,
         "presupuestoId": "absent",
+        "minRespuestaLength": 30,
         "maxLatenciaMs": 120000
       }
     },
     {
       "id": "presupuesto-flujo-completo",
       "tags": ["llm", "presupuesto", "slow"],
-      "descripcion": "Cantidades → contacto → localidad → PDF/presupuesto (assert por turno)",
+      "descripcion": "Cantidades → contacto → localidad → presupuesto/PDF",
       "turnos": [
         "10 unidades de bondiola y 15 de guiso de lenteja",
         "Alejandro penalba 3815479768",
@@ -71,31 +87,77 @@
       "expectPorTurno": [
         {
           "presupuestoId": "absent",
-          "respuestaContieneAny": ["localidad", "barrio", "envío", "envio", "bondiola", "anot", "cantidad"],
+          "pideLocalidadOEnvio": true,
+          "respuestaContieneAny": ["cantidad", "unidad", "anot", "producto", "presup"],
           "respuestaNoContiene": [".pdf", "supabase.co/storage"],
+          "noFallbackError": true,
           "maxLatenciaMs": 120000
         },
         {
           "presupuestoId": "absent",
-          "respuestaContieneAny": [
-            "localidad",
-            "barrio",
-            "envío",
-            "envio",
-            "tel",
-            "gracias",
-            "anot",
-            "alejandro"
-          ],
+          "respuestaContieneAny": ["localidad", "barrio", "envío", "envio", "tel", "gracias", "anot", "datos"],
           "respuestaNoContiene": [".pdf", "supabase.co/storage"],
+          "noFallbackError": true,
           "maxLatenciaMs": 120000
         },
         {
           "presupuestoId": "present",
-          "respuestaContieneAny": ["presupuesto", "http"],
+          "respuestaContieneAny": ["presupuesto", "http", "total", "pdf"],
           "respuestaRegex": "(https?://|\\.pdf|ARS|\\$)",
+          "montoArsEnRespuesta": true,
           "respuestaNoContiene": ["decime productos y cantidades otra vez", "no tengo productos"],
+          "noFallbackError": true,
           "maxLatenciaMs": 180000
+        }
+      ]
+    },
+    {
+      "id": "hilo-humita-correccion",
+      "tags": ["llm", "contexto", "slow"],
+      "descripcion": "Contexto multi-turno, seguimiento y corrección (mensajes con productos; asserts de comportamiento)",
+      "turnos": [
+        "para consultar el precio de los fideos",
+        "No. pasame el precio de la bondiola y de la humita",
+        "y la humita?",
+        "busca bien el producto humita, su precio y stock",
+        "y porque antes dijiste que no lo tenias al precio?"
+      ],
+      "expectPorTurno": [
+        {
+          "minRespuestaLength": 35,
+          "respuestaContieneAny": ["precio", "fideo", "product", "variedad", "cuál", "?"],
+          "noFallbackError": true,
+          "noPlantillaSinCoincidencias": true,
+          "maxLatenciaMs": 120000
+        },
+        {
+          "montoArsEnRespuesta": true,
+          "mencionaPrecioOStock": true,
+          "noFallbackError": true,
+          "noPlantillaSinCoincidencias": true,
+          "minRespuestaLength": 30,
+          "maxLatenciaMs": 120000
+        },
+        {
+          "mencionaPrecioOStock": true,
+          "noFallbackError": true,
+          "noPlantillaSinCoincidencias": true,
+          "minRespuestaLength": 25,
+          "maxLatenciaMs": 120000
+        },
+        {
+          "mencionaPrecioOStock": true,
+          "minToolCalls": 1,
+          "noFallbackError": true,
+          "noPlantillaSinCoincidencias": true,
+          "maxLatenciaMs": 120000
+        },
+        {
+          "reconoceCorreccionOMeta": true,
+          "noFallbackError": true,
+          "noPlantillaSinCoincidencias": true,
+          "minRespuestaLength": 25,
+          "maxLatenciaMs": 120000
         }
       ]
     }

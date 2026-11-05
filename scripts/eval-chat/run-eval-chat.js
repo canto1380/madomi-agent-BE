@@ -4,16 +4,23 @@
  * Uso:
  *   npm run test:eval:chat -- --tag smoke
  *   npm run test:eval:chat -- --id saludo-puro
- *   node scripts/eval-chat/run-eval-chat.js --tag llm --json
+ *   npm run test:eval:chat -- --id hilo-humita-correccion
+ *   node scripts/eval-chat/run-eval-chat.js hilo-humita-correccion
  */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
-import { bootstrapEvalChat, teardownEvalChat } from './setupEvalEnv.js';
+import { cargarEnvEvalChat, bootstrapEvalChat, teardownEvalChat } from './setupEvalEnv.js';
 import { evaluarExpectativas } from './evaluarExpectativas.js';
 
+cargarEnvEvalChat();
+
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function parseArgs(argv) {
   const out = { tags: [], ids: [], json: false, dataset: path.join(here, 'dataset.json') };
@@ -27,15 +34,49 @@ function parseArgs(argv) {
       out.ids.push(argv[++i]);
     } else if (a === '--dataset' && argv[i + 1]) {
       out.dataset = path.resolve(argv[++i]);
+    } else if (!a.startsWith('-')) {
+      out.ids.push(a);
     }
   }
   return out;
 }
 
+function normalizarIdEval(id) {
+  return String(id).toLowerCase().replace(/correccion/g, 'correcion');
+}
+
+function resolverIdsEscenario(idsSolicitados, escenarios) {
+  const resueltos = [];
+  for (const raw of idsSolicitados) {
+    const exact = escenarios.find((s) => s.id === raw);
+    if (exact) {
+      resueltos.push(exact.id);
+      continue;
+    }
+    const normRaw = normalizarIdEval(raw);
+    const parcial = escenarios.find(
+      (s) =>
+        normalizarIdEval(s.id) === normRaw ||
+        s.id.startsWith(raw) ||
+        (raw.length >= 8 && s.id.includes(raw)),
+    );
+    if (parcial) {
+      if (parcial.id !== raw) {
+        console.warn(`[eval] id "${raw}" → escenario "${parcial.id}"`);
+      }
+      resueltos.push(parcial.id);
+      continue;
+    }
+    console.warn(`[eval] id desconocido (omitido): "${raw}"`);
+  }
+  return [...new Set(resueltos)];
+}
+
 function filtrarEscenarios(escenarios, { tags, ids }) {
   let lista = escenarios;
-  if (ids.length) {
-    lista = lista.filter((s) => ids.includes(s.id));
+  const idsResueltos = resolverIdsEscenario(ids, escenarios);
+  if (idsResueltos.length) {
+    lista = lista.filter((s) => idsResueltos.includes(s.id));
   }
   if (tags.length) {
     lista = lista.filter((s) => s.tags?.some((t) => tags.includes(t)));
@@ -49,8 +90,12 @@ async function ejecutarEscenario(enviarMensajeChatServicio, escenario) {
   let ultimo = null;
 
   const errores = [];
+  const pausaTurnoMs = Number(process.env.EVAL_CHAT_TURNO_DELAY_MS || 2500);
 
   for (let i = 0; i < escenario.turnos.length; i += 1) {
+    if (i > 0 && pausaTurnoMs > 0) {
+      await sleep(pausaTurnoMs);
+    }
     const mensaje = escenario.turnos[i];
     const inicio = Date.now();
     ultimo = await enviarMensajeChatServicio({
@@ -74,6 +119,7 @@ async function ejecutarEscenario(enviarMensajeChatServicio, escenario) {
         presupuestoId: ultimo?.presupuestoId ?? null,
         latenciaMs,
         estadoLead: ultimo?.estadoLead ?? null,
+        toolCallsCount: ultimo?.toolCallsCount ?? 0,
       });
       for (const e of errTurno) {
         errores.push(`turno ${i + 1}: ${e}`);
@@ -88,6 +134,7 @@ async function ejecutarEscenario(enviarMensajeChatServicio, escenario) {
       presupuestoId: ultimo?.presupuestoId ?? null,
       latenciaMs: ultimoTurno?.latenciaMs ?? 0,
       estadoLead: ultimo?.estadoLead ?? null,
+      toolCallsCount: ultimo?.toolCallsCount ?? 0,
     });
     for (const e of errFinal) {
       errores.push(`último turno: ${e}`);
@@ -114,6 +161,7 @@ async function main() {
 
   if (!escenarios.length) {
     console.error('Ningún escenario coincide con --tag / --id');
+    console.error('Ids disponibles:', (dataset.escenarios ?? []).map((s) => s.id).join(', '));
     process.exit(1);
   }
 
@@ -121,10 +169,23 @@ async function main() {
 
   console.log('=== Eval chat agente-clientes-ia ===');
   console.log(`Runtime: ${env.ASISTENTE_RUNTIME} | LLM: ${env.ASISTENTE_LLM_PROVEEDOR}`);
+  console.log(
+    `Timeout turno: ${env.CHAT_TURN_TIMEOUT_MS}ms | Cursor: ${env.CURSOR_RUN_TIMEOUT_MS}ms`,
+  );
+  if (args.ids.length === 0 && args.tags.length === 0) {
+    console.warn(
+      '⚠️  Ejecutando TODOS los escenarios (muchas llamadas a Cursor). Preferí: npm run test:eval:chat -- --id <escenario>',
+    );
+  }
   console.log(`Escenarios: ${escenarios.length}\n`);
 
   const resultados = [];
+  const pausaEscenarioMs = Number(process.env.EVAL_CHAT_ESCENARIO_DELAY_MS || 8000);
+
   for (const esc of escenarios) {
+    if (resultados.length > 0 && pausaEscenarioMs > 0) {
+      await sleep(pausaEscenarioMs);
+    }
     process.stdout.write(`• ${esc.id} … `);
     try {
       const r = await ejecutarEscenario(enviarMensajeChatServicio, esc);

@@ -40,6 +40,22 @@ export async function bajaLogicaCategoriaRepositorio(id) {
   return prisma.categorias.update({ where: { id }, data: { activo: false } });
 }
 
+export async function obtenerMaxOrdenCategoriaRepositorio() {
+  const fila = await prisma.categorias.aggregate({ _max: { orden: true } });
+  return fila._max.orden ?? 0;
+}
+
+export async function reordenarCategoriasRepositorio(idsEnOrden) {
+  await prisma.$transaction(
+    idsEnOrden.map((id, index) =>
+      prisma.categorias.update({
+        where: { id },
+        data: { orden: index + 1 },
+      }),
+    ),
+  );
+}
+
 export async function contarCategoriasRepositorio() {
   return prisma.categorias.count();
 }

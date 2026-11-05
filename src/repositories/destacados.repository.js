@@ -19,9 +19,12 @@ export async function listarDestacadosAdminRepositorio({ search, activo, seccion
       { producto: { nombre: { contains: search, mode: 'insensitive' } } },
     ];
   }
+  const direccion = order === 'desc' ? 'desc' : 'asc';
   const orderBy = sort
-    ? { [sort]: order === 'desc' ? 'desc' : 'asc' }
-    : [{ seccion: 'asc' }, { orden: 'asc' }];
+    ? sort === 'orden'
+      ? [{ orden: direccion }, { createdAt: 'asc' }]
+      : { [sort]: direccion }
+    : [{ seccion: 'asc' }, { orden: 'asc' }, { createdAt: 'asc' }];
   return prisma.productosDestacados.findMany({ where, include: { producto: true }, orderBy });
 }
 
@@ -37,6 +40,25 @@ export async function buscarDestacadoPorProductoSeccionRepositorio(productoId, s
 
 export async function crearDestacadoRepositorio(data) {
   return prisma.productosDestacados.create({ data, include: { producto: true } });
+}
+
+export async function obtenerMaxOrdenDestacadoRepositorio(seccion) {
+  const fila = await prisma.productosDestacados.aggregate({
+    where: { seccion, activo: true },
+    _max: { orden: true },
+  });
+  return fila._max.orden ?? 0;
+}
+
+export async function reordenarDestacadosRepositorio(idsEnOrden) {
+  await prisma.$transaction(
+    idsEnOrden.map((id, index) =>
+      prisma.productosDestacados.update({
+        where: { id },
+        data: { orden: index + 1 },
+      }),
+    ),
+  );
 }
 
 export async function actualizarDestacadoRepositorio(id, data) {

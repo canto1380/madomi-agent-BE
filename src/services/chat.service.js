@@ -91,6 +91,7 @@ export async function enviarMensajeChatServicio({ sessionAnonimaId, mensaje, met
     presupuestoId: presupuestoIdRuntime,
     pedidoId: pedidoIdRuntime,
     contextoChat: contextoChatActualizado,
+    toolCallsCount = 0,
   } = await ejecutarLoopAsistente({
     empresa,
     bot,
@@ -132,6 +133,7 @@ export async function enviarMensajeChatServicio({ sessionAnonimaId, mensaje, met
     estadoLead: leadActualizado.estado,
     presupuestoId: presupuestoIdRuntime ? String(presupuestoIdRuntime) : null,
     pedidoId: pedidoIdRuntime ? String(pedidoIdRuntime) : null,
+    toolCallsCount,
     acciones: inferirAccionesDesdeLead(leadActualizado, presupuestoIdRuntime, pedidoIdRuntime),
   };
 }

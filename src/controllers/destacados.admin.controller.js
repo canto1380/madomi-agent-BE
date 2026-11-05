@@ -6,6 +6,7 @@ import {
   crearDestacadoServicio,
   actualizarDestacadoServicio,
   eliminarDestacadoServicio,
+  reordenarDestacadosServicio,
 } from '../services/destacados.service.js';
 
 export const listarDestacadosAdmin = asyncHandler(async (req, res) => {
@@ -35,6 +36,15 @@ export const actualizarDestacado = asyncHandler(async (req, res) => {
   try {
     const data = await actualizarDestacadoServicio(req.validatedParams.id, req.validatedData);
     res.status(200).json({ data, error: null, message: 'Destacado actualizado' });
+  } catch (error) {
+    return responderErrorAdmin(res, error);
+  }
+});
+
+export const reordenarDestacados = asyncHandler(async (req, res) => {
+  try {
+    const data = await reordenarDestacadosServicio(req.validatedData);
+    res.status(200).json({ data, error: null, message: 'Orden de Lo último actualizado' });
   } catch (error) {
     return responderErrorAdmin(res, error);
   }

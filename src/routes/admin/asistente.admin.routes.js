@@ -10,7 +10,6 @@ import {
 import { requirePermiso } from '../../middlewares/requirePermiso.js';
 import { PERMISOS_COMERCIAL } from '../../constants/permisos.js';
 import { actualizarAsistenteBotSchema } from '../../validations/asistente.validation.js';
-
 const router = Router();
 const leerComercial = requirePermiso(PERMISOS_COMERCIAL.LEER);
 const escribirComercial = requirePermiso(PERMISOS_COMERCIAL.ESCRIBIR);

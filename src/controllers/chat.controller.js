@@ -33,20 +33,34 @@ export const enviarMensajeChat = asyncHandler(async (req, res) => {
   try {
     const { sessionAnonimaId, mensaje, metadata } = req.validatedData;
 
+    let keepaliveTimer = null;
     if (sse) {
       res.status(200);
       res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders?.();
       escribirEventoSse(res, 'status', { phase: 'typing' });
+      keepaliveTimer = setInterval(() => {
+        if (!res.writableEnded) {
+          res.write(': keepalive\n\n');
+        }
+      }, 12_000);
     }
 
-    const data = await enviarMensajeChatServicio({
-      sessionAnonimaId,
-      mensaje,
-      metadata,
-    });
+    let data;
+    try {
+      data = await enviarMensajeChatServicio({
+        sessionAnonimaId,
+        mensaje,
+        metadata,
+      });
+    } finally {
+      if (keepaliveTimer) {
+        clearInterval(keepaliveTimer);
+      }
+    }
 
     if (sse) {
       const final = data.respuesta ?? '';

@@ -16,9 +16,13 @@
     "test:e2e:venta-5000": "node scripts/e2e-venta-5000.js",
     "test:e2e:crm-admin": "node scripts/e2e-crm-admin.js",
     "test:eval:chat": "node scripts/eval-chat/run-eval-chat.js",
+    "test:eval:expectativas": "node scripts/eval-chat/test-evaluar-expectativas.js",
     "test:eval:chat:smoke": "node scripts/eval-chat/run-eval-chat.js --tag smoke",
     "test:eval:chat:presupuesto": "node scripts/eval-chat/run-eval-chat.js --tag presupuesto",
+    "test:eval:chat:hilo": "node scripts/eval-chat/run-eval-chat.js --id hilo-humita-correccion",
     "check:prod:asistente": "node scripts/check-prod-asistente.js",
+    "test:validacion-comercial": "node scripts/test-validacion-comercial.js",
+    "test:integracion:busqueda-catalogo": "node scripts/test-integracion-busqueda-catalogo.js",
     "db:studio": "prisma studio"
   },
   "dependencies": {

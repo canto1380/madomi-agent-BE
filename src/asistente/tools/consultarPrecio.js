@@ -30,7 +30,11 @@ export const consultarPrecioTool = {
     const args = argsSchema.parse(rawArgs);
     const producto = await obtenerProductoComercialPorIdRepositorio(args.productoId);
     if (!producto) {
-      return { encontrado: false, mensaje: 'Producto no disponible comercialmente' };
+      return {
+        status: 'producto_no_encontrado',
+        encontrado: false,
+        productoId: args.productoId,
+      };
     }
 
     const tipoPrecioAplicado = resolverTipoClientePrecio(producto, {
@@ -53,6 +57,12 @@ export const consultarPrecioTool = {
       producto.precioMinorista != null ? Number(producto.precioMinorista) : null;
 
     return {
+      status:
+        precioFinal != null
+          ? 'precio_disponible'
+          : precioMinoristaBase != null || precioMayoristaBase != null
+            ? 'precio_parcial'
+            : 'precio_no_cargado',
       encontrado: true,
       productoId: producto.id,
       nombre: producto.nombre,

@@ -16,7 +16,7 @@ No reemplaza pruebas manuales en el widget, pero detecta regresiones de saludo, 
 - Postgres + Mongo levantados, seeds aplicados (`npm run db:seed`, `npm run db:seed:mongo`)
 - Bot activo en Mongo
 - **`CURSOR_API_KEY`** (cloud) para escenarios con tag `llm` / `slow`
-- Escenarios **`smoke`** (p. ej. `saludo-puro`) no dependen de Cursor en el primer turno (fast path)
+- Opción A: **todos** los turnos usan Cursor (incl. `smoke`); reservá tiempo y API quota
 
 ## Cómo correr
 
@@ -29,8 +29,10 @@ npm run test:eval:chat:smoke
 # Todos los escenarios del dataset (varios minutos, usa Cursor)
 npm run test:eval:chat
 
-# Un escenario
-node scripts/eval-chat/run-eval-chat.js --id saludo-puro
+# Un escenario (npm requiere `--` antes de `--id`)
+npm run test:eval:chat -- --id hilo-humita-correccion
+# o posicional:
+node scripts/eval-chat/run-eval-chat.js hilo-humita-correccion
 
 # Solo escenarios LLM (catálogo, precio, presupuesto)
 node scripts/eval-chat/run-eval-chat.js --tag llm
@@ -46,6 +48,15 @@ Variables útiles (`.env` o inline):
 | `ASISTENTE_RUNTIME=agente-clientes-ia` | Default del runner |
 | `ASISTENTE_LLM_PROVEEDOR=auto` | Cursor si hay key |
 | `CHAT_TURN_TIMEOUT_MS` | Timeout por turno en backend |
+| `EVAL_CHAT_TURN_TIMEOUT_MS` | Default 180000 en eval si no hay CHAT_TURN_TIMEOUT_MS |
+| `EVAL_CHAT_ESCENARIO_DELAY_MS` | Pausa entre escenarios (default 8000) |
+| `EVAL_CHAT_TURNO_DELAY_MS` | Pausa entre turnos multi-mensaje (default 2500) |
+
+## Si casi todo falla con “problema momentáneo”
+
+1. **¿Corriste un solo escenario?** Con npm hace falta `--` antes de `--id`. Sin filtro se ejecutan los 7 escenarios seguidos.
+2. **Límite Cursor Cloud Agents:** si en consola aparece `reached the limit` / `Cloud Agents simultaneously`, no es el bot: es la cuota concurrente del plan. Esperá unos minutos, corré `--id` de a uno, o subí el plan / bajá agentes cloud activos en Cursor.
+3. **Timeouts:** en eval el turno mínimo pasa a 180s; podés subir con `EVAL_CHAT_TURN_TIMEOUT_MS`.
 
 ## Dataset
 
@@ -63,13 +74,30 @@ Cada escenario:
 
 Expectativas soportadas (`evaluarExpectativas.js`):
 
-- `respuestaContiene`: array de fragmentos (todas deben aparecer)
-- `respuestaContieneAny`: al menos uno
-- `respuestaNoContiene`
-- `respuestaRegex`
+**Texto**
+
+- `respuestaContiene` / `respuestaContieneAny` / `respuestaNoContiene` / `respuestaRegex`
+- `minRespuestaLength` / `maxRespuestaLength`
+
+**Comportamiento (sin atar a un producto del catálogo)**
+
+- `montoArsEnRespuesta`: hay `$` o montos parseables / ARS
+- `mencionaPrecioOStock`: precio, stock, disponibilidad o monto
+- `pideLocalidadOEnvio`: localidad, barrio, envío, zona
+- `respuestaCatalogoONovedades`: respuesta coherente con catálogo/novedades
+- `reconoceCorreccionOMeta`: disculpa / reconoce error previo (turnos meta)
+- `noFallbackError`: no “problema momentáneo”, timeout copy, etc.
+- `noPlantillaSinCoincidencias`: no plantilla rígida “no encontré productos…”
+
+**Runtime**
+
+- `minToolCalls` / `maxToolCalls` (desde `toolCallsCount` del servicio chat)
 - `presupuestoId`: `"present"` \| `"absent"`
-- `maxLatenciaMs`
-- `estadoLead` (opcional)
+- `maxLatenciaMs`, `estadoLead` (opcional)
+
+Los **mensajes** del dataset pueden nombrar productos reales (como un cliente); las **aserciones** priorizan formato y flujo, no SKUs.
+
+Verificación rápida del evaluador: `npm run test:eval:expectativas`.
 
 Para añadir un caso: copiá un bloque en `dataset.json`, ajustá turnos y `expect`, corré `--id tu-id`.
 

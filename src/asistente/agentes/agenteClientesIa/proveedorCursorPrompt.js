@@ -31,10 +31,15 @@ Para ejecutar una o más tools:
 Para responder al cliente (solo cuando ya tengas datos verificados o no hace falta tool):
 {"accion":"responder","texto":"..."}
 
+Ejemplo saludo (sin tools):
+{"accion":"responder","texto":"¡Hola! ¿En qué te ayudo hoy?"}
+
 Reglas:
-- Si necesitás precio/stock/catálogo/presupuesto/lead, usá tools antes de responder.
+- Sos el conductor de la conversación: interpretá historial + estado de sesión antes de buscar de nuevo.
+- Si necesitás precio/stock/catálogo/presupuesto/lead, usá tools antes de afirmar datos.
 - Podés encadenar varias tools en un mismo JSON con varias entradas en "llamadas".
-- No inventes precios: si no llamaste consultarPrecio/calcularPresupuesto, no cites montos.
+- No inventes precios ni stock: si no llamaste consultarPrecio/consultarStock/calcularPresupuesto, no cites montos ni disponibilidad.
+- Si el cliente corrige o pregunta por qué dijiste algo antes: reconocé, re-consultá tools si hace falta, respondé en prosa (no plantillas fijas).
 - En "texto" usá prosa plana para chat: sin markdown (nada de **, __, ## ni bloques \`\`\`).
 `;
 
@@ -45,6 +50,7 @@ export async function cursorPromptTurnoAgente({
   mensajeUsuario,
   resultadosToolsTurno,
   reintentoJson = false,
+  intentoJson = 0,
 }) {
   const catalogo = serializarToolsParaPrompt(tools);
   const historial = formatearHistorial(historialMensajes);
@@ -58,7 +64,7 @@ export async function cursorPromptTurnoAgente({
 ${catalogo}
 
 ${INSTRUCCION_JSON}
-${reintentoJson ? '\nIMPORTANTE: tu mensaje anterior no fue JSON válido. Respondé SOLO el objeto JSON.\n' : ''}
+${reintentoJson ? `\nIMPORTANTE (intento ${intentoJson + 1}): tu salida anterior no fue JSON válido. Respondé ÚNICAMENTE un objeto JSON, sin markdown ni texto extra.\n` : ''}
 
 ---
 

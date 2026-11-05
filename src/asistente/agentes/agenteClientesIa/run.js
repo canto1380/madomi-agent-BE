@@ -7,55 +7,26 @@ import { normalizarEstadoConversacion } from '../../conversacion/estadoConversac
 import { construirSystemPromptAgenteClientesIa } from './construirContextoLlm.js';
 import { ejecutarCommerceKernelPostTurno } from '../../commerce/kernelPostTurno.js';
 import { enriquecerRespuestaComercial } from '../../commerce/enriquecerRespuestaComercial.js';
+import { aplicarValidacionComercialRespuesta } from '../../commerce/validarRespuestaComercial.js';
 import { resolverProveedorLlmAgenteClientes } from './resolverProveedorLlm.js';
 import { cursorPromptTurnoAgente } from './proveedorCursorPrompt.js';
 import { openAiPasoAgente } from './proveedorOpenAi.js';
 import { parsearAccionModelo } from './parsearAccionModelo.js';
-import { esSaludoPuro, respuestaSaludoRapido } from './turnoSaludoRapido.js';
 import { withTimeout } from '../../loop/cursorRunTimeout.js';
-import {
-  formatearRespuestaPresupuestoDesdeTools,
-  resolverAsistenciaTurnoDeterministico,
-} from './asistirTurnoDeterministico.js';
 import { extraerTextoRespuestaDesdeSalidaModelo } from './fallbackTextoModelo.js';
 import { normalizarTextoRespuestaChat } from './normalizarTextoRespuestaChat.js';
+import { esTurnoSaludoPuro, respuestaSaludoPuroAgente } from './turnoSaludoPuro.js';
 
-const MAX_TOOL_ITERATIONS = 8;
+const MAX_TOOL_ITERATIONS = 10;
 
 function esErrorTimeout(err) {
   const msg = err?.message ?? '';
   return /TIMEOUT|CURSOR_AGENTE_CLIENTES_TIMEOUT|CHAT_TURN_TIMEOUT/.test(msg);
 }
 
-async function ejecutarAsistenciaDeterministica(asistencia, ctx, tools, leadDatos) {
-  if (asistencia.tipo === 'respuesta') {
-    return {
-      respuestaLlm: asistencia.texto,
-      resultadosTools: [],
-      toolCallsCount: 0,
-      modeloRun: 'agente-clientes-ia:atajo-deterministico',
-    };
-  }
-
-  const resultadosTools = [];
-  for (const llamada of asistencia.llamadas ?? []) {
-    const result = await ejecutarTool(llamada.nombre, llamada.args ?? {}, ctx, tools);
-    resultadosTools.push({ tool: llamada.nombre, result });
-  }
-
-  let respuestaLlm = 'Listo, revisé tu pedido. ¿Querés que sigamos con el presupuesto o el envío?';
-  if (asistencia.formatear === 'presupuesto') {
-    respuestaLlm = formatearRespuestaPresupuestoDesdeTools(resultadosTools, {
-      leadTieneLocalidad: Boolean(leadDatos?.localidad),
-    });
-  }
-
-  return {
-    respuestaLlm,
-    resultadosTools,
-    toolCallsCount: asistencia.llamadas?.length ?? 0,
-    modeloRun: 'agente-clientes-ia:atajo-deterministico',
-  };
+function esErrorLimiteCursorCloud(err) {
+  const msg = err?.message ?? '';
+  return /reached the limit|Cloud Agents simultaneously|validation_error.*Ultra/i.test(msg);
 }
 
 async function loopConCursor({
@@ -68,8 +39,9 @@ async function loopConCursor({
   const resultadosTools = [];
   let toolCallsCount = 0;
   let respuestaLlm = '';
-  let reintentoJson = false;
+  let reintentosJson = 0;
   const modelId = env.CURSOR_MODEL || 'composer-2.5';
+  const MAX_REINTENTOS_JSON = 3;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i += 1) {
     const { texto } = await cursorPromptTurnoAgente({
@@ -78,14 +50,15 @@ async function loopConCursor({
       historialMensajes,
       mensajeUsuario,
       resultadosToolsTurno: resultadosTools,
-      reintentoJson,
+      reintentoJson: reintentosJson > 0,
+      intentoJson: reintentosJson,
     });
 
     const accion = parsearAccionModelo(texto);
 
     if (accion.tipo === 'invalido') {
-      if (!reintentoJson) {
-        reintentoJson = true;
+      if (reintentosJson < MAX_REINTENTOS_JSON) {
+        reintentosJson += 1;
         continue;
       }
       const fallback = extraerTextoRespuestaDesdeSalidaModelo(texto);
@@ -101,17 +74,12 @@ async function loopConCursor({
         const result = await ejecutarTool(llamada.nombre, llamada.args ?? {}, ctx, tools);
         resultadosTools.push({ tool: llamada.nombre, result });
       }
-      reintentoJson = false;
+      reintentosJson = 0;
       continue;
     }
 
     respuestaLlm = accion.texto;
     break;
-  }
-
-  if (!respuestaLlm && toolCallsCount > 0) {
-    respuestaLlm =
-      'Listo, revisé la información. ¿Querés que arme el presupuesto o te cuento algo más?';
   }
 
   return { respuestaLlm, resultadosTools, toolCallsCount, modeloRun: `agente-clientes-ia:cursor:${modelId}` };
@@ -191,7 +159,7 @@ async function loopConOpenAi({
 }
 
 /**
- * Runtime producto: LLM (Cursor por defecto) + tools + commerce kernel.
+ * Runtime producto (Opción A): LLM conduce el turno; tools solo aportan hechos; kernel cierra comercio.
  */
 export async function ejecutarAgenteClientesIa({
   empresa,
@@ -217,54 +185,74 @@ export async function ejecutarAgenteClientesIa({
   const inicio = Date.now();
   let loopResult;
 
+  if (esTurnoSaludoPuro(mensajeUsuario)) {
+    const respuestaSaludo = normalizarTextoRespuestaChat(respuestaSaludoPuroAgente());
+    const kernel = await ejecutarCommerceKernelPostTurno({
+      estadoEntrada: estadoInicial,
+      resultadosTools: [],
+      ctx,
+      tools,
+      mensajeUsuario,
+    });
+
+    await crearAgenteRunRepositorio({
+      conversacionId,
+      modelo: 'agente-clientes-ia:saludo-sin-tools',
+      tokensEntrada: 0,
+      tokensSalida: 0,
+      latenciaMs: Date.now() - inicio,
+      toolCallsCount: 0,
+      error: null,
+    });
+
+    return {
+      respuesta: enriquecerRespuestaComercial(respuestaSaludo, {
+        pdfUrl: kernel.pdfUrl,
+        totalPresupuesto: kernel.totalPresupuesto,
+        moneda: empresa.moneda ?? 'ARS',
+      }),
+      toolCallsCount: 0,
+      presupuestoId: kernel.presupuestoId,
+      pedidoId: kernel.pedidoId,
+      contextoChat: kernel.estado,
+    };
+  }
+
   try {
-    if (esSaludoPuro(mensajeUsuario)) {
-      loopResult = {
-        respuestaLlm: respuestaSaludoRapido(empresa.nombre),
-        resultadosTools: [],
-        toolCallsCount: 0,
-        modeloRun: `agente-clientes-ia:saludo-rapido`,
-      };
-    } else {
-      const asistencia = resolverAsistenciaTurnoDeterministico({
-        mensajeUsuario,
-        estado: estadoInicial,
-      });
+    const systemPrompt = construirSystemPromptAgenteClientesIa({
+      empresa,
+      bot,
+      estado: estadoInicial,
+      leadDatos,
+      compacto: proveedor === 'cursor',
+    });
 
-      if (asistencia) {
-        loopResult = await ejecutarAsistenciaDeterministica(asistencia, ctx, tools, leadDatos);
-      } else {
-        const systemPrompt = construirSystemPromptAgenteClientesIa({
-          empresa,
-          bot,
-          estado: estadoInicial,
-          leadDatos,
-          compacto: proveedor === 'cursor',
+    const turnoMs = env.CHAT_TURN_TIMEOUT_MS || env.CURSOR_RUN_TIMEOUT_MS || 90_000;
+
+    const ejecutarLoop = async () => {
+      if (proveedor === 'cursor') {
+        return loopConCursor({
+          systemPrompt,
+          tools,
+          historialMensajes,
+          mensajeUsuario,
+          ctx,
         });
-
-        const turnoMs = env.CHAT_TURN_TIMEOUT_MS || env.CURSOR_RUN_TIMEOUT_MS || 90_000;
-
-        const ejecutarLoop = async () => {
-          if (proveedor === 'cursor') {
-            return loopConCursor({
-              systemPrompt,
-              tools,
-              historialMensajes,
-              mensajeUsuario,
-              ctx,
-            });
-          }
-          return loopConOpenAi({
-            systemPrompt,
-            tools,
-            historialMensajes,
-            ctx,
-            bot,
-          });
-        };
-
-        loopResult = await withTimeout(ejecutarLoop(), turnoMs, 'CHAT_TURN_TIMEOUT');
       }
+      return loopConOpenAi({
+        systemPrompt,
+        tools,
+        historialMensajes,
+        ctx,
+        bot,
+      });
+    };
+
+    loopResult = await withTimeout(ejecutarLoop(), turnoMs, 'CHAT_TURN_TIMEOUT');
+
+    if (!loopResult.respuestaLlm?.trim() && loopResult.toolCallsCount > 0) {
+      loopResult.respuestaLlm =
+        'Revisé el catálogo pero no pude armar la respuesta. ¿Podés repetir qué producto o precio te interesa?';
     }
 
     const kernel = await ejecutarCommerceKernelPostTurno({
@@ -275,14 +263,16 @@ export async function ejecutarAgenteClientesIa({
       mensajeUsuario,
     });
 
-    const respuesta = enriquecerRespuestaComercial(
+    const respuestaValidada = aplicarValidacionComercialRespuesta(
       normalizarTextoRespuestaChat(loopResult.respuestaLlm),
-      {
-        pdfUrl: kernel.pdfUrl,
-        totalPresupuesto: kernel.totalPresupuesto,
-        moneda: empresa.moneda ?? 'ARS',
-      },
+      loopResult.resultadosTools,
     );
+
+    const respuesta = enriquecerRespuestaComercial(respuestaValidada, {
+      pdfUrl: kernel.pdfUrl,
+      totalPresupuesto: kernel.totalPresupuesto,
+      moneda: empresa.moneda ?? 'ARS',
+    });
 
     await crearAgenteRunRepositorio({
       conversacionId,
@@ -334,6 +324,10 @@ export async function ejecutarAgenteClientesIa({
       throw error;
     }
 
+    if (process.env.EVAL_CHAT === '1') {
+      console.error('[eval-chat] error runtime:', error?.message ?? error);
+    }
+
     const kernel = await ejecutarCommerceKernelPostTurno({
       estadoEntrada: estadoInicial,
       resultadosTools: [],
@@ -342,9 +336,13 @@ export async function ejecutarAgenteClientesIa({
       mensajeUsuario,
     });
 
+    const respuestaLimite =
+      'Disculpá, el asistente llegó al límite de uso en Cursor Cloud en este momento. Probá de nuevo en unos minutos o escribinos por WhatsApp.';
+    const respuestaGenerica =
+      'Disculpá, hubo un problema momentáneo al procesar tu mensaje. ¿Podés repetirlo? Si sigue fallando, escribinos por WhatsApp.';
+
     return {
-      respuesta:
-        'Disculpá, hubo un problema momentáneo al procesar tu mensaje. ¿Podés repetirlo? Si sigue fallando, escribinos por WhatsApp.',
+      respuesta: esErrorLimiteCursorCloud(error) ? respuestaLimite : respuestaGenerica,
       toolCallsCount: 0,
       presupuestoId: kernel.presupuestoId,
       pedidoId: kernel.pedidoId,

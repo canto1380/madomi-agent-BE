@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { listarProductosComercialesRepositorio } from '../../repositories/productos.repository.js';
 import { mapearProductoComercialTool } from '../productoComercial.js';
 import { listarIdsProductosNovedades } from '../novedades/listarIdsNovedades.js';
 import { normalizarTerminoBusqueda } from '../intent/normalizarTerminoBusqueda.js';
 import { listarCategoriasActivasRepositorio } from '../../repositories/categorias.repository.js';
 import { resolverCategoriaDesdeTexto } from '../busqueda/resolverCategoriaBusqueda.js';
 import { agregarProductoInteresLeadRepositorio } from '../../mongo/repositories/leads.repository.js';
+import { buscarProductosComercial } from '../busqueda/buscarProductosComercial.js';
 
 const argsSchema = z.object({
   search: z.string().optional(),
@@ -18,7 +18,7 @@ const argsSchema = z.object({
 export const buscarProductosTool = {
   name: 'buscarProductos',
   description:
-    'Busca productos activos comercialmente por texto (tolera typos y nombres parecidos) o categoría activa en Postgres.',
+    'Catálogo comercial en Postgres (todos los productos activos comercialmente, actuales y futuros). Busca por texto en nombre/categoría/descripción/id (similitud en backend) o listado/novedades.',
   parameters: {
     type: 'object',
     properties: {
@@ -48,12 +48,17 @@ export const buscarProductosTool = {
 
     const idsNovedades = args.novedades ? await listarIdsProductosNovedades() : undefined;
 
-    const rows = await listarProductosComercialesRepositorio({
-      search: args.listarCatalogo || args.novedades ? undefined : searchNorm,
+    const busqueda = await buscarProductosComercial({
+      search: args.listarCatalogo || args.novedades ? undefined : args.search,
       categoria: categoriaFiltro,
-      ids: idsNovedades,
       limit: args.novedades ? Math.max(idsNovedades?.length ?? 0, 1) : limit,
+      ids: idsNovedades,
+      listarCatalogo: args.listarCatalogo,
+      novedades: args.novedades,
+      idsNovedades,
     });
+
+    const rows = busqueda.rows;
 
     if (ctx.leadId) {
       for (const row of rows.slice(0, 8)) {
@@ -65,9 +70,14 @@ export const buscarProductosTool = {
       }
     }
 
+    const productos = rows.map(mapearProductoComercialTool);
+
     return {
-      total: rows.length,
-      productos: rows.map(mapearProductoComercialTool),
+      status: productos.length > 0 ? 'coincidencias' : 'sin_coincidencias',
+      consulta: busqueda.consultaOriginal,
+      consultaNormalizada: busqueda.consultaNormalizada,
+      total: productos.length,
+      productos,
     };
   },
 };

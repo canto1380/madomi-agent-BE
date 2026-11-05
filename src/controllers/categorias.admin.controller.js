@@ -6,6 +6,7 @@ import {
   crearCategoriaServicio,
   actualizarCategoriaServicio,
   eliminarCategoriaServicio,
+  reordenarCategoriasServicio,
 } from '../services/categorias.service.js';
 
 export const listarCategoriasAdmin = asyncHandler(async (req, res) => {
@@ -35,6 +36,15 @@ export const actualizarCategoria = asyncHandler(async (req, res) => {
   try {
     const data = await actualizarCategoriaServicio(req.validatedParams.id, req.validatedData);
     res.status(200).json({ data, error: null, message: 'Categoría actualizada' });
+  } catch (error) {
+    return responderErrorAdmin(res, error);
+  }
+});
+
+export const reordenarCategorias = asyncHandler(async (req, res) => {
+  try {
+    const data = await reordenarCategoriasServicio(req.validatedData.ids);
+    res.status(200).json({ data, error: null, message: 'Orden de categorías actualizado' });
   } catch (error) {
     return responderErrorAdmin(res, error);
   }

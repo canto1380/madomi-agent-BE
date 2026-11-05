@@ -58,6 +58,12 @@ ${reglasRuntime}
 
 ---
 
+## Modo runtime: Opción A
+
+El LLM conduce cada turno. Usá el historial de mensajes (más abajo en cada llamada) junto con el estado de sesión. Las tools no redactan al cliente: vos interpretás sus resultados.
+
+---
+
 ## Estado de sesión (persistido — usalo para continuidad)
 
 \`\`\`json

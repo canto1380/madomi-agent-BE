@@ -16,6 +16,20 @@ function parrafosHistoriDesdeMapa(mapa) {
     .map((clave) => mapa[clave]);
 }
 
+function valoresNumerados(mapa, prefijo) {
+  const re = new RegExp(`^${prefijo.replace(/\./g, '\\.')}\\.(\\d+)$`);
+  const indices = new Set();
+  Object.keys(mapa).forEach((clave) => {
+    const match = clave.match(re);
+    if (match) indices.add(Number(match[1]));
+  });
+
+  return [...indices]
+    .sort((a, b) => a - b)
+    .map((index) => mapa[`${prefijo}.${index}`] ?? '')
+    .filter((valor) => String(valor).trim());
+}
+
 function statsHistoriDesdeMapa(mapa) {
   const indices = new Set();
   Object.keys(mapa).forEach((clave) => {
@@ -43,7 +57,14 @@ export function mapearContenidoPublico(textos) {
       titulo: mapa['hero.titulo'] ?? '',
       subtitulo: mapa['hero.subtitulo'] ?? '',
       ctaProductos: mapa['hero.ctaProductos'] ?? '',
+      ctaProductosHref: mapa['hero.ctaProductosHref'] ?? '',
       ctaContacto: mapa['hero.ctaContacto'] ?? '',
+      ctaSecundario: mapa['hero.ctaSecundario'] ?? '',
+      ctaSecundarioHref: mapa['hero.ctaSecundarioHref'] ?? '',
+      scrollTexto: mapa['hero.scrollTexto'] ?? '',
+      scrollHref: mapa['hero.scrollHref'] ?? '',
+      frases: valoresNumerados(mapa, 'hero.frase'),
+      highlights: valoresNumerados(mapa, 'hero.highlight'),
     },
     historia: {
       titulo: mapa['historia.titulo'] ?? '',

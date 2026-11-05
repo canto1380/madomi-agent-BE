@@ -9,6 +9,16 @@ export function cargarEnvEvalChat() {
   process.env.ASISTENTE_RUNTIME = process.env.ASISTENTE_RUNTIME || 'agente-clientes-ia';
   process.env.ASISTENTE_LLM_PROVEEDOR = process.env.ASISTENTE_LLM_PROVEEDOR || 'auto';
   process.env.ASISTENTE_REDACT = 'none';
+  process.env.EVAL_CHAT = '1';
+  const minEvalMs = 180_000;
+  const turnMs = Number(
+    process.env.EVAL_CHAT_TURN_TIMEOUT_MS || process.env.CHAT_TURN_TIMEOUT_MS || 0,
+  );
+  const cursorMs = Number(
+    process.env.EVAL_CHAT_CURSOR_TIMEOUT_MS || process.env.CURSOR_RUN_TIMEOUT_MS || 0,
+  );
+  process.env.CHAT_TURN_TIMEOUT_MS = String(Math.max(turnMs, minEvalMs));
+  process.env.CURSOR_RUN_TIMEOUT_MS = String(Math.max(cursorMs, minEvalMs));
 }
 
 export async function bootstrapEvalChat() {

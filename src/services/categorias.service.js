@@ -9,6 +9,8 @@ import {
   crearCategoriaRepositorio,
   actualizarCategoriaRepositorio,
   bajaLogicaCategoriaRepositorio,
+  obtenerMaxOrdenCategoriaRepositorio,
+  reordenarCategoriasRepositorio,
 } from '../repositories/categorias.repository.js';
 
 const CAMPOS_ORDEN = ['nombre', 'slug', 'orden', 'activo', 'createdAt', 'updatedAt'];
@@ -61,17 +63,21 @@ export async function crearCategoriaServicio(data) {
   const existente = await buscarCategoriaPorSlugRepositorio(slug);
   if (existente) throw new AppError('Ya existe una categoría con ese slug', 409, 'CONFLICT');
 
+  const orden = data.orden === undefined
+    ? (await obtenerMaxOrdenCategoriaRepositorio()) + 1
+    : data.orden;
+
   const categoria = await crearCategoriaRepositorio({
     nombre: data.nombre,
     slug,
-    orden: data.orden ?? 0,
+    orden,
     activo: data.activo ?? true,
   });
   return mapearCategoriaAdmin(categoria);
 }
 
 export async function actualizarCategoriaServicio(id, data) {
-  await asegurarCategoriaExiste(id);
+  const actual = await asegurarCategoriaExiste(id);
 
   if (data.slug) {
     const existente = await buscarCategoriaPorSlugRepositorio(data.slug);
@@ -80,8 +86,26 @@ export async function actualizarCategoriaServicio(id, data) {
     }
   }
 
-  const categoria = await actualizarCategoriaRepositorio(id, data);
+  const cambios = { ...data };
+  if (cambios.activo === true && !actual.activo && cambios.orden === undefined) {
+    cambios.orden = (await obtenerMaxOrdenCategoriaRepositorio()) + 1;
+  }
+
+  const categoria = await actualizarCategoriaRepositorio(id, cambios);
   return mapearCategoriaAdmin(categoria);
+}
+
+export async function reordenarCategoriasServicio(ids) {
+  const activas = await listarCategoriasActivasRepositorio();
+  const vigentes = new Set(activas.map((categoria) => categoria.id));
+
+  if (ids.length !== activas.length || ids.some((id) => !vigentes.has(id)) || new Set(ids).size !== ids.length) {
+    throw new AppError('La lista no coincide con las categorías activas', 400, 'VALIDATION_ERROR');
+  }
+
+  await reordenarCategoriasRepositorio(ids);
+  const actualizadas = await listarCategoriasActivasRepositorio();
+  return actualizadas.map(mapearCategoriaAdmin);
 }
 
 export async function eliminarCategoriaServicio(id) {
